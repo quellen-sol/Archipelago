@@ -3,17 +3,17 @@ from AutoWorld import World, WebWorld
 from .Errors import ArchipelaPalError
 from .Items import (
     ArchipelaPalItem,
+    item_codes_table,
     item_names_table,
-    JUNK_ITEM_CODE,
-    JUNK_ITEM_NAME,
-    GOAL_ITEM_OFFSET,
-    GOAL_ITEM_NAME,
-    KEY_ITEM_OFFSET,
-    SPEED_BOOST_NAME,
-    SPEED_BOOST_CODE,
 )
-from .Locations import ArchipelaPalLocation, loc_table, CHEST_ITEM_OFFSET
+from .Locations import (
+    ArchipelaPalLocation,
+    loc_codes_table,
+    loc_names_table,
+)
 from .Options import ArchipelaPalOptions
+from .offsets import *
+from .themes.all_themes import all_themes
 from .utils import *
 
 
@@ -33,7 +33,7 @@ class ArchipelaPal(World):
     web = ArchipelaPalWeb()
 
     item_name_to_id = item_names_table
-    location_name_to_id = loc_table
+    location_name_to_id = loc_names_table
 
     item_table = {}
 
@@ -56,9 +56,10 @@ class ArchipelaPal(World):
 
         pct_speed_boosts = self.options.pct_speed_boosts
 
-        min_expected_chests = (
-            num_regions * min_chests_per_region + 1
-        )  # +1 for the starting chest
+        theme_choice = self.option.game_theme
+        theme_obj = all_themes[theme_choice]
+
+        min_expected_chests = num_regions * min_chests_per_region + num_sphere_0_chests
 
         if min_chests_per_region > max_chests_per_region:
             raise ArchipelaPalError(
@@ -86,8 +87,8 @@ class ArchipelaPal(World):
         # Create Hub Chests (Sphere 0)
         for chest_num in range(num_sphere_0_chests):
             real_chest = chest_num + 1
-            chest_name = f"Hub Chest {real_chest}"
-            chest_code = CHEST_ITEM_OFFSET + real_chest
+            chest_code = CHEST_ITEM_OFFSET + (theme_obj.offset_code << 8) + real_chest
+            chest_name = loc_codes_table[chest_code]
 
             location = ArchipelaPalLocation(self.player, chest_name, chest_code, hub)
             hub.locations.append(location)
@@ -102,8 +103,10 @@ class ArchipelaPal(World):
             region_obj = Region(region_name, self.player, self.multiworld)
 
             # Create Key for this region
-            key_name = f"Key {region_display_num}"
-            key_code = KEY_ITEM_OFFSET + region_display_num
+            key_code = (
+                KEY_ITEM_OFFSET + (theme_obj.offset_code << 8) + region_display_num
+            )
+            key_name = item_codes_table[key_code]
             key_item = ArchipelaPalItem(
                 key_name, ItemClassification.progression, key_code, self.player
             )
@@ -122,8 +125,8 @@ class ArchipelaPal(World):
 
             for chest_num in range(num_chests):
                 real_chest = chest_num + 1
-                chest_name = f"Chest {region_display_num}-{real_chest}"
                 chest_code = CHEST_ITEM_OFFSET + (region_display_num << 8) + real_chest
+                chest_name = loc_codes_table[chest_code]
 
                 location = ArchipelaPalLocation(
                     self.player, chest_name, chest_code, region_obj
@@ -136,33 +139,30 @@ class ArchipelaPal(World):
             # Rule that the key is required to access the region
             # Wtf is this referencing bs, Python??? I have to use a default argument to hold on to the correct value????
             def rule(state, key_name=key_name):
-                # print(f"Checking for {key_name} in {state}")
                 return state.has(key_name, self.player)
 
-            # print(f"Connecting {hub.name} to {region_obj.name} with key rule checking for {key_name}")
             hub.connect(region_obj, None, rule)
 
-        # Add Goal items
-        goal_item = ArchipelaPalItem(
-            GOAL_ITEM_NAME,
-            ItemClassification.progression,
-            GOAL_ITEM_OFFSET,
-            self.player,
-        )
-        self.item_table[GOAL_ITEM_NAME] = {
-            "classification": ItemClassification.progression,
-            "code": GOAL_ITEM_OFFSET,
-        }
-        for goal_num in range(num_goal_items):
+        total_junk_items -= num_goal_items
+
+        # Add all goals from the theme to item_table
+        for goal_item_name in theme_obj.goal_items:
+            goal_item_code = item_names_table[goal_item_name]
+            self.item_table[goal_item_name] = {
+                "classification": ItemClassification.progression,
+                "code": goal_item_code,
+            }
+
+        # for num_goal_items, pick a random one and add it to itempool
+        for _ in range(num_goal_items):
+            goal_item_name = theme_obj.choose_random_goal_item()
+            goal_item = self.create_item(goal_item_name)
             itempool.append(goal_item)
 
-        # Add completion goal
+        # new completion condition is that we have num_goal_items of any goal item
         self.multiworld.completion_condition[self.player] = (
-            lambda state: state.has_all_counts(
-                {
-                    GOAL_ITEM_NAME: num_goal_items,
-                },
-                self.player,
+            lambda state: state.has_from_list(
+                theme_obj.goal_items, self.player, num_goal_items
             )
         )
 
@@ -171,26 +171,33 @@ class ArchipelaPal(World):
         num_speed_boosts = int(total_checks * pct_float)
         # Clamp speed boosts to the number of junk items
         num_speed_boosts = min(num_speed_boosts, total_junk_items)
-        self.item_table[SPEED_BOOST_NAME] = {
-            "classification": ItemClassification.useful,
-            "code": SPEED_BOOST_CODE,
-        }
-        speed_boost_item = ArchipelaPalItem(
-            SPEED_BOOST_NAME, ItemClassification.useful, SPEED_BOOST_CODE, self.player
-        )
-        for speed_boost_num in range(num_speed_boosts):
+
+        # Add all speed boosts from the theme to item_table
+        for speed_boost_name in theme_obj.speed_boost_items:
+            speed_boost_code = item_names_table[speed_boost_name]
+            self.item_table[speed_boost_name] = {
+                "classification": ItemClassification.useful,
+                "code": speed_boost_code,
+            }
+
+        for _ in range(num_speed_boosts):
+            speed_boost_name = theme_obj.choose_random_speed_boost_item()
+            speed_boost_item = self.create_item(speed_boost_name)
             itempool.append(speed_boost_item)
+
         total_junk_items -= num_speed_boosts
 
         # Add Junk items
-        self.item_table[JUNK_ITEM_NAME] = {
-            "classification": ItemClassification.filler,
-            "code": JUNK_ITEM_CODE,
-        }
-        junk_item = ArchipelaPalItem(
-            JUNK_ITEM_NAME, ItemClassification.filler, JUNK_ITEM_CODE, self.player
-        )
-        for junk_num in range(total_junk_items - num_goal_items):
+        for junk_item_name in theme_obj.junk_items:
+            junk_item_code = item_names_table[junk_item_name]
+            self.item_table[junk_item_name] = {
+                "classification": ItemClassification.filler,
+                "code": junk_item_code,
+            }
+
+        for _ in range(total_junk_items):
+            junk_item_name = theme_obj.choose_random_junk_item()
+            junk_item = self.create_item(junk_item_name)
             itempool.append(junk_item)
 
         self.multiworld.regions.append(menu)
@@ -227,6 +234,7 @@ class ArchipelaPal(World):
         num_goal = self.options.num_goal_items.value
         slot_name = self.player_name
         num_regions = self.options.num_regions.value
+        game_theme = self.options.game_theme.value
         chests_per_region_list = self.chests_per_region_result
 
         return {
@@ -236,4 +244,5 @@ class ArchipelaPal(World):
             "slot_name": slot_name,
             "num_regions": num_regions,
             "chests_per_region_list": chests_per_region_list,
+            "game_theme": game_theme,
         }
