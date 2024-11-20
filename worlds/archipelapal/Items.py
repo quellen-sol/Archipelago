@@ -1,5 +1,5 @@
 from BaseClasses import Item
-from themes.all_themes import all_themes
+from .themes.all_themes import all_themes
 
 
 class ArchipelaPalItem(Item):

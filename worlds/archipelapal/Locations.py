@@ -1,5 +1,5 @@
 from BaseClasses import Location
-from themes.all_themes import all_themes
+from .themes.all_themes import all_themes
 
 
 class ArchipelaPalLocation(Location):

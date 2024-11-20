@@ -59,8 +59,8 @@ class PctSpeedBoosts(Range):
 class GameTheme(Choice):
     """Choose a theme for the game (aesthetic only)"""
     display_name = "Game Theme"
-    Adventure = 0
-    default = Adventure
+    option_Adventure = 0
+    default = option_Adventure
 
 @dataclass
 class ArchipelaPalOptions(PerGameCommonOptions):

@@ -1,5 +1,5 @@
 from BaseClasses import Region, ItemClassification
-from AutoWorld import World, WebWorld
+from worlds.AutoWorld import World, WebWorld
 from .Errors import ArchipelaPalError
 from .Items import (
     ArchipelaPalItem,
@@ -12,6 +12,7 @@ from .Locations import (
     loc_names_table,
 )
 from .Options import ArchipelaPalOptions
+from .themes.ThemeContents import ThemeContents
 from .offsets import *
 from .themes.all_themes import all_themes
 from .utils import *
@@ -24,7 +25,7 @@ class ArchipelaPalWeb(WebWorld):
 
 class ArchipelaPal(World):
     """
-    An automatic world-playing bot for Archipelago Randomizer
+    An automatic world-playing buddy for Archipelago Randomizer
     """
 
     game = "ArchipelaPal"
@@ -56,8 +57,8 @@ class ArchipelaPal(World):
 
         pct_speed_boosts = self.options.pct_speed_boosts
 
-        theme_choice = self.options.game_theme
-        theme_obj = all_themes[theme_choice.value]
+        theme_choice = self.options.game_theme.value
+        theme_obj: ThemeContents = all_themes[theme_choice]
 
         min_expected_chests = num_regions * min_chests_per_region + num_sphere_0_chests
 
@@ -86,8 +87,8 @@ class ArchipelaPal(World):
 
         # Create Hub Chests (Sphere 0)
         for chest_num in range(num_sphere_0_chests):
-            real_chest = chest_num + 1
-            chest_code = CHEST_ITEM_OFFSET + (theme_obj.offset_code << 8) + real_chest
+            real_chest_num = chest_num + 1
+            chest_code = CHEST_ID_OFFSET + (theme_obj.offset_code << 8) + real_chest_num
             chest_name = loc_codes_table[chest_code]
 
             location = ArchipelaPalLocation(self.player, chest_name, chest_code, hub)
@@ -103,18 +104,14 @@ class ArchipelaPal(World):
             region_obj = Region(region_name, self.player, self.multiworld)
 
             # Create Key for this region
-            key_code = (
-                KEY_ITEM_OFFSET + (theme_obj.offset_code << 8) + region_display_num
-            )
+            key_code = KEY_ID_OFFSET + (theme_obj.offset_code << 8) + region_display_num
             key_name = item_codes_table[key_code]
-            key_item = ArchipelaPalItem(
-                key_name, ItemClassification.progression, key_code, self.player
-            )
-            itempool.append(key_item)
             self.item_table[key_name] = {
                 "classification": ItemClassification.progression,
                 "code": key_code,
             }
+            key_item = self.create_item(key_name)
+            itempool.append(key_item)
 
             num_chests = self.random.randint(
                 min_chests_per_region, max_chests_per_region
@@ -124,8 +121,13 @@ class ArchipelaPal(World):
             total_junk_items += num_chests - 1
 
             for chest_num in range(num_chests):
-                real_chest = chest_num + 1
-                chest_code = CHEST_ITEM_OFFSET + (region_display_num << 8) + real_chest
+                real_chest_num = chest_num + 1
+                chest_code = (
+                    CHEST_ID_OFFSET
+                    + (region_display_num << 16)
+                    + (theme_obj.offset_code << 8)
+                    + real_chest_num
+                )
                 chest_name = loc_codes_table[chest_code]
 
                 location = ArchipelaPalLocation(
