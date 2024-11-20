@@ -1,13 +1,13 @@
 # Junk Item
 # LE Byte 0 = Offset
 # LE Byte 1 = Theme
-# LE Byte 2 = Unique Name (for multiple of the same junk)
+# LE Byte 2 = Unique Name
 JUNK_ID_OFFSET = 0x000000
 
 # Goal Item
 # LE Byte 0 = Offset
 # LE Byte 1 = Theme
-# LE Byte 2 = Unique Name (for multiple of the same goal)
+# LE Byte 2 = Unique Name
 GOAL_ID_OFFSET = 0x010000
 
 # Key Item
@@ -27,5 +27,5 @@ CHEST_ID_OFFSET = 0x03000000
 # LE Byte 0 = Offset
 # LE Byte 1 = Affect Type
 # LE Byte 2 = Theme
-# LE Byte 3 = Unique Name (for multiple of the same affect)
+# LE Byte 3 = Unique Name
 GAME_AFFECTOR_ID_OFFSET = 0x04000000
