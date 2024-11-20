@@ -60,6 +60,7 @@ class GameTheme(Choice):
     """Choose a theme for the game (aesthetic only)"""
     display_name = "Game Theme"
     option_Adventure = 0
+    option_SciFi = 1
     default = option_Adventure
 
 @dataclass
