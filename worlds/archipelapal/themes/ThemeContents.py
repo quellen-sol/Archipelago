@@ -59,7 +59,7 @@ class ThemeContents:
             codes_table[item_code] = item_name
         # Write Speed boost items to names_table and codes_table
         for i, item_name in enumerate(self.speed_boost_items):
-            item_code = GAME_AFFECTOR_ID_OFFSET + shifted_offset + i
+            item_code = GAME_AFFECTOR_ID_OFFSET + shifted_offset + i # + 0x00 << 16 for speed boost
             names_table[item_name] = item_code
             codes_table[item_code] = item_name
         # Write all Keys to names_table and codes_table
