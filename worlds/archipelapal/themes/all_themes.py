@@ -1,4 +1,4 @@
-from adventure import adventure_theme
+from .adventure import adventure_theme
 
 all_themes = [adventure_theme]
 

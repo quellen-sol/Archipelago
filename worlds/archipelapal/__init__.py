@@ -56,8 +56,8 @@ class ArchipelaPal(World):
 
         pct_speed_boosts = self.options.pct_speed_boosts
 
-        theme_choice = self.option.game_theme
-        theme_obj = all_themes[theme_choice]
+        theme_choice = self.options.game_theme
+        theme_obj = all_themes[theme_choice.value]
 
         min_expected_chests = num_regions * min_chests_per_region + num_sphere_0_chests
 
@@ -187,7 +187,7 @@ class ArchipelaPal(World):
 
         total_junk_items -= num_speed_boosts
 
-        # Add Junk items
+        # Add Junk items to item_table
         for junk_item_name in theme_obj.junk_items:
             junk_item_code = item_names_table[junk_item_name]
             self.item_table[junk_item_name] = {
@@ -195,6 +195,7 @@ class ArchipelaPal(World):
                 "code": junk_item_code,
             }
 
+        # Add Junk items to itempool
         for _ in range(total_junk_items):
             junk_item_name = theme_obj.choose_random_junk_item()
             junk_item = self.create_item(junk_item_name)
@@ -226,7 +227,7 @@ class ArchipelaPal(World):
 
     def create_item(self, name: str) -> ArchipelaPalItem:
         item = self.item_table[name]
-        return ArchipelaPalItem(name, item.classification, item.code, self.player)
+        return ArchipelaPalItem(name, item["classification"], item["code"], self.player)
 
     def fill_slot_data(self):
         min_wait_time = self.options.min_time_between_checks.value

@@ -1,5 +1,6 @@
-from ..offsets import JUNK_CODE_OFFSET, GOAL_ITEM_OFFSET, CHEST_ITEM_OFFSET
+from ..offsets import JUNK_CODE_OFFSET, GOAL_ITEM_OFFSET, CHEST_ITEM_OFFSET, GAME_AFFECTOR_OFFSET
 import random
+
 
 class ThemeContents:
     def __init__(self, offset_code: int):
@@ -13,10 +14,10 @@ class ThemeContents:
 
     def choose_random_goal_item(self) -> str:
         return random.choice(self.goal_items)
-    
+
     def choose_random_speed_boost_item(self) -> str:
         return random.choice(self.speed_boost_items)
-    
+
     def choose_random_junk_item(self) -> str:
         return random.choice(self.junk_items)
 
@@ -29,14 +30,14 @@ class ThemeContents:
     def set_hub_name(self, hub_name: str):
         self.hub_name = hub_name
 
-    def set_speed_boost_name(self, speed_boost_name: str):
-        self.speed_boost_name = speed_boost_name
-
     def add_junk_item(self, item_name: str):
         self.junk_items.append(item_name)
 
     def add_goal_item(self, item_name: str):
         self.goal_items.append(item_name)
+
+    def add_speed_boost_item(self, item_name: str):
+        self.speed_boost_items.append(item_name)
 
     def write_to_items_tables(self, names_table: dict, codes_table: dict):
         shifted_offset = self.offset_code << 8
@@ -48,13 +49,17 @@ class ThemeContents:
             item_code = GOAL_ITEM_OFFSET + shifted_offset + i
             names_table[item_name] = item_code
             codes_table[item_code] = item_name
+        for i, item_name in enumerate(self.speed_boost_items):
+            item_code = GAME_AFFECTOR_OFFSET + shifted_offset + i
+            names_table[item_name] = item_code
+            codes_table[item_code] = item_name
 
     def write_to_locations_table(self, loc_table: dict, codes_table):
         shifted_offset = self.offset_code << 8
         for region_n in range(0, 256):
             for chest_n in range(1, 256):
                 chest_code = (
-                    CHEST_ITEM_OFFSET + (region_n << 16) + shifted_offset + chest_n
+                    CHEST_ITEM_OFFSET | (region_n << 16) | shifted_offset | chest_n
                 )
                 if region_n == 0:
                     # Use Hub name
@@ -70,7 +75,6 @@ class ThemeContents:
         assert self.chest_name != "", "Chest name cannot be empty"
         assert self.key_name != "", "Key name cannot be empty"
         assert self.hub_name != "", "Hub name cannot be empty"
-        assert self.speed_boost_name != "", "Speed boost name cannot be empty"
 
         # Ensure that the junk items are unique
         assert len(self.junk_items) == len(
@@ -82,8 +86,18 @@ class ThemeContents:
             set(self.goal_items)
         ), "Goal items must be unique"
 
+        # Ensure that the speed boost items are unique
+        assert len(self.speed_boost_items) == len(
+            set(self.speed_boost_items)
+        ), "Speed boost items must be unique"
+
         # Ensure that there is at least one junk item
         assert len(self.junk_items) > 0, "There must /be at least one junk item"
 
         # Ensure that there is at least one goal item
         assert len(self.goal_items) > 0, "There must be at least one goal item"
+
+        # Ensure that there is at least one speed boost item
+        assert (
+            len(self.speed_boost_items) > 0
+        ), "There must be at least one speed boost item"
