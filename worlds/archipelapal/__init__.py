@@ -228,8 +228,13 @@ class ArchipelaPal(World):
         pass
 
     def create_item(self, name: str) -> ArchipelaPalItem:
-        item = self.item_table[name]
-        return ArchipelaPalItem(name, item["classification"], item["code"], self.player)
+        if name in self.item_table:
+            item = self.item_table[name]
+            return ArchipelaPalItem(name, item["classification"], item["code"], self.player)
+        elif name in item_names_table:
+            return ArchipelaPalItem(name, ItemClassification.filler, item_names_table[name], self.player)
+        else:
+            raise KeyError(f"Item '{name}' not found in item_table or item_names_table")
 
     def fill_slot_data(self):
         min_wait_time = self.options.min_time_between_checks.value
